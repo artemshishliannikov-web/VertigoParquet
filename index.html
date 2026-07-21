@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>TRICOL · Расчёт материалов</title>
+<style>
+  :root{
+    --bg: #1c1b19;
+    --surface: #262420;
+    --surface-2: #2f2c26;
+    --line: #3c382f;
+    --text: #efe9de;
+    --text-dim: #a79c87;
+    --accent: #c08a3e;
+    --accent-soft: #4a3a22;
+    --accent-text: #1c1b19;
+    --warn: #c1573f;
+    --radius: 10px;
+    font-size: 16px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    line-height: 1.4;
+    padding-bottom: 60px;
+  }
+
+  .wrap{ max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Header ---------- */
+  header.top{
+    background: linear-gradient(180deg, #211f1c, var(--bg));
+    border-bottom: 1px solid var(--line);
+    padding: 22px 16px 18px;
+    position: sticky; top:0; z-index: 5;
+  }
+  header.top .tag{
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  header.top h1{
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: 26px;
+    margin: 4px 0 0;
+    letter-spacing: 0.2px;
+  }
+  header.top p{
+    margin: 6px 0 0;
+    color: var(--text-dim);
+    font-size: 13.5px;
+  }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .card h2{
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2::before{
+    content:"";
+    width:6px; height:6px;
+    background: var(--accent);
+    border-radius: 50%;
+    display:inline-block;
+  }
+
+  /* ---------- Segmented control (категория / скидка) ---------- */
+  .seg-row{ display:flex; gap:8px; }
+  .seg-btn{
+    flex:1;
+    text-align:center;
+    padding: 12px 6px;
+    font-size: 13px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    cursor:pointer;
+    user-select: none;
+  }
+  .seg-btn.active{ background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight:600; }
+  .seg-row.wrap-2{ flex-wrap: wrap; }
+  .seg-row.wrap-2 .seg-btn{ flex: 1 1 calc(50% - 4px); }
+
+  /* ---------- Area input ---------- */
+  .area-row{ display:flex; align-items:stretch; gap:10px; }
+  .area-input-box{
+    flex:1;
+    display:flex; align-items:center;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0 12px;
+  }
+  .area-input-box input{
+    flex:1;
+    background:none; border:none; outline:none;
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 22px;
+    padding: 12px 0;
+    width: 100%;
+    -moz-appearance: textfield;
+  }
+  .area-input-box input::-webkit-outer-spin-button,
+  .area-input-box input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .area-input-box span{ color: var(--text-dim); font-size: 14px; }
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .toggle-row .lbl{ font-size: 14.5px; }
+  .toggle-row .lbl small{ display:block; color:var(--text-dim); font-size:12px; margin-top:2px; }
+
+  .switch{ position:relative; width:46px; height:26px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{
+    position:absolute; cursor:pointer; inset:0;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    transition: .15s;
+  }
+  .slider::before{
+    content:""; position:absolute; height:18px; width:18px;
+    left:3px; top:3px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: .15s;
+  }
+  .switch input:checked + .slider{ background: var(--accent-soft); border-color: var(--accent); }
+  .switch input:checked + .slider::before{ transform: translateX(20px); background: var(--accent); }
+
+  /* ---------- Product list ---------- */
+  .category-label{
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 16px 0 8px;
+  }
+  .category-label:first-child{ margin-top:0; }
+
+  .product{
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-2);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .product-main{
+    display:flex; align-items:center; gap:12px;
+    padding: 12px;
+    cursor:pointer;
+  }
+  .checkbox{
+    width:22px; height:22px; flex-shrink:0;
+    border: 1.5px solid var(--text-dim);
+    border-radius: 5px;
+    display:flex; align-items:center; justify-content:center;
+    transition: .12s;
+  }
+  .checkbox svg{ width:13px; height:13px; opacity:0; transition:.12s; }
+  .product.checked .checkbox{ background: var(--accent); border-color: var(--accent); }
+  .product.checked .checkbox svg{ opacity:1; }
+  .product-info{ flex:1; min-width:0; }
+  .product-info .name{ font-size: 14.5px; }
+  .product-info .meta{
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .product-extra{
+    display:none;
+    padding: 0 12px 12px 46px;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .product.checked .product-extra.has-extra{ display:block; }
+
+  .radio-group{ display:flex; gap:8px; flex-wrap:wrap; }
+  .radio-pill{
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    cursor:pointer;
+    user-select: none;
+  }
+  .radio-pill.active{
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .radio-pill small{ display:block; font-size:10.5px; opacity:.8; margin-top:1px; }
+
+  .empty-note{
+    text-align:center;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 10px 0 2px;
+  }
+
+  /* ---------- Discount ---------- */
+  .discount-field{
+    margin-top: 12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .discount-field label{ font-size:13.5px; color:var(--text-dim); flex:1; }
+  .pct-input{
+    display:flex; align-items:center;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+    width: 82px;
+  }
+  .pct-input input{
+    width:100%; background:none; border:none; outline:none;
+    color:var(--text); font-family: ui-monospace, monospace; font-size:15px;
+    text-align:right;
+  }
+  .pct-input span{ color:var(--text-dim); font-size:13px; margin-left:3px; }
+  .warn-note{
+    font-size: 11.5px;
+    color: var(--warn);
+    margin-top: 8px;
+    display:none;
+  }
+  .warn-note.show{ display:block; }
+
+  .item-discount-row{
+    display:flex; align-items:center; gap:10px;
+    padding: 8px 0;
+    border-top: 1px dashed var(--line);
+  }
+  .item-discount-row:first-child{ border-top:none; }
+  .item-discount-row .iname{ flex:1; font-size:13px; color: var(--text); }
+
+  /* ---------- Calculate button ---------- */
+  .calc-btn{
+    width:100%;
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor:pointer;
+  }
+  .calc-btn:active{ transform: translateY(1px); }
+
+  /* ---------- Modal (смета для клиента) ---------- */
+  .modal-overlay{
+    display:none;
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    overflow-y: auto;
+    padding: 18px 16px 40px;
+  }
+  .modal-overlay.open{ display:block; }
+  .modal-topbar{
+    max-width: 560px; margin: 0 auto 16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-hint{ font-size:12px; color: var(--text-dim); }
+  .close-btn{
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor:pointer;
+  }
+
+  .receipt-wrap{ max-width: 560px; margin: 0 auto; }
+  .receipt{
+    background: #f4efe3;
+    color: #2a2620;
+    border-radius: 4px;
+    padding: 22px 18px 26px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .receipt::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-1px; height:12px;
+    background:
+      linear-gradient(-45deg, transparent 6px, #f4efe3 6px) 0 0/12px 12px repeat-x;
+  }
+  .receipt .r-head{ text-align:center; margin-bottom: 14px; }
+  .receipt .r-head .biz{ font-size:14px; font-weight:700; letter-spacing:1px; }
+  .receipt .r-head .sub{ font-size:11px; color:#6b6252; margin-top:2px; }
+  .receipt .r-line{ border-top: 1px dashed #b7ac95; margin: 10px 0; }
+  .receipt .r-item{ margin-bottom: 10px; }
+  .receipt .r-item .rn{ font-weight:700; font-size:12.5px; }
+  .receipt .r-item .rd{ color:#6b6252; font-size:11.5px; margin-top:1px; }
+  .receipt .r-item .rp{
+    display:flex; justify-content:space-between; margin-top:3px; font-size:12.5px;
+  }
+  .receipt .r-item .rp .strike{ text-decoration: line-through; color:#8a8069; margin-right:6px; }
+  .receipt .r-total{
+    display:flex; justify-content:space-between;
+    font-size: 15px; font-weight:700;
+    margin-top: 8px;
+  }
+  .receipt .r-savings{
+    display:flex; justify-content:space-between;
+    font-size: 12px; color:#7a6a3a; margin-top:4px;
+  }
+  .receipt .r-foot{
+    text-align:center; color:#8a8069; font-size:10.5px; margin-top:16px;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Расчёт материалов</h1>
+    <p>Выбери тип покрытия, отметь химию, укажи площадь — приложение подберёт банки и посчитает смету для клиента.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ТИП ПОКРЫТИЯ -->
+  <div class="card">
+    <h2>Тип покрытия</h2>
+    <div class="seg-row wrap-2" id="categorySelector">
+      <div class="seg-btn" data-cat="parquet">Паркет</div>
+      <div class="seg-btn" data-cat="laminate">Ламинат</div>
+      <div class="seg-btn" data-cat="lacquer">Лак</div>
+      <div class="seg-btn" data-cat="sps">SPC &amp; LVT</div>
+    </div>
+  </div>
+
+  <!-- ПЛОЩАДЬ -->
+  <div class="card">
+    <h2>Площадь объекта</h2>
+    <div class="area-row">
+      <div class="area-input-box">
+        <input type="number" id="areaInput" inputmode="decimal" placeholder="0" min="0" step="0.1">
+        <span>м²</span>
+      </div>
+    </div>
+
+    <div class="toggle-row" id="faneraRow" style="display:none;">
+      <div class="lbl">Нужна фанера
+        <small>2К клей ляжет в 2 слоя, если силан не выбран</small>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="faneraToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ТОВАРЫ -->
+  <div class="card">
+    <h2>Продукты</h2>
+
+    <div id="spcSpatulaBlock" style="display:none; margin-bottom:14px;">
+      <div class="lbl" style="font-size:14.5px; margin-bottom:8px;">Тип основания / шпатель
+        <small style="display:block; color:var(--text-dim); font-size:12px; margin-top:2px;">Расход клея зависит от материала</small>
+      </div>
+      <div class="radio-group" id="spatulaOptions"></div>
+    </div>
+
+    <div id="lacquerLayersBlock" style="display:none; margin-bottom:14px;">
+      <div class="lbl" style="font-size:14.5px; margin-bottom:8px;">Количество слоёв лака
+        <small style="display:block; color:var(--text-dim); font-size:12px; margin-top:2px;">Влияет на расход лака (не грунтовки)</small>
+      </div>
+      <div class="radio-group" id="lacquerLayerOptions"></div>
+    </div>
+
+    <div id="productList"><div class="empty-note">Сначала выбери тип покрытия выше</div></div>
+  </div>
+
+  <!-- СКИДКА -->
+  <div class="card">
+    <h2>Скидка клиенту</h2>
+    <div class="seg-row">
+      <div class="seg-btn active" data-mode="none">Без скидки</div>
+      <div class="seg-btn" data-mode="total">На всю смету</div>
+      <div class="seg-btn" data-mode="perItem">По товарам</div>
+    </div>
+
+    <div id="totalDiscountBlock" style="display:none;">
+      <div class="discount-field">
+        <label>Скидка на смету</label>
+        <div class="pct-input">
+          <input type="number" id="totalDiscountInput" min="0" max="40" placeholder="0">
+          <span>%</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="perItemDiscountBlock" style="display:none;">
+      <div id="perItemList"></div>
+    </div>
+
+    <div class="warn-note" id="discountWarn">Максимальная скидка — 40%. Значение ограничено автоматически.</div>
+  </div>
+
+  <button class="calc-btn" id="calcBtn">Рассчитать смету</button>
+
+  <div style="height:20px;"></div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО СО СМЕТОЙ ДЛЯ КЛИЕНТА -->
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal-topbar">
+    <span class="modal-hint">Сделай скриншот сметы ниже для клиента</span>
+    <button class="close-btn" id="closeModal">✕ Закрыть</button>
+  </div>
+  <div class="receipt-wrap" id="receiptWrap"></div>
+</div>
+
+<script>
+/* ==================== ДАННЫЕ ПО ПРОДУКТАМ ==================== */
+/* topCategory: к каким разделам ("паркет" / "ламинат" / "sps") относится товар */
+const PRODUCTS = [
+  {
+    id: '2k', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 2K PU PT',
+    consumption: 1.3, unit: 'кг', isTwoK: true,
+    containers: [{ size: 9, price: 7200 }]
+  },
+  {
+    id: 'silane', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 1K PT‑MS HARD‑ELASTIC',
+    consumption: 1.3, unit: 'кг', isSilane: true, isSilaneLayer: true,
+    containersStandard: [
+      { size: 14, price: 14550, label: 'Ведро 14 кг' },
+      { size: 7, price: 8225, label: 'Пакет сашe 7 кг' },
+      { size: 1, price: 1450, label: 'Туба 1 кг' }
+    ],
+    containersSashe: [
+      { size: 7, price: 8225, label: 'Пакет сашe 7 кг' },
+      { size: 1, price: 1450, label: 'Туба 1 кг' }
+    ]
+  },
+  {
+    id: 'laminate', topCategory: ['laminate'], subCategory: 'Клей для ламината', name: 'TRICOL PRO LAMINATE MS PLUS',
+    consumption: 0.9, unit: 'кг',
+    containers: [{ size: 15, price: 13950 }]
+  },
+  {
+    id: 'ms_lvt', topCategory: ['sps'], subCategory: 'Клей для SPC / LVT / WPC', name: 'TRICOL 1K MS LVT PLUS',
+    consumption: 0.5, unit: 'кг', isSpcGlue: true,
+    containers: [{ size: 5, price: 4600 }]
+  },
+  {
+    id: 'pu_pvc', topCategory: ['sps'], subCategory: 'Клей для SPC / LVT / WPC', name: 'TRICOL 2K PU PVC',
+    consumption: 0.5, unit: 'кг', isSpcGlue: true,
+    containers: [{ size: 5, price: 3800 }]
+  },
+  {
+    id: 'lacquer_basic', topCategory: ['lacquer'], subCategory: 'Лак для паркета', name: 'TRICOL BASIC',
+    consumption: 0.1, unit: 'кг', isLacquer: true,
+    containers: [{ size: 5, price: 11900 }]
+  },
+  {
+    id: 'lacquer_top', topCategory: ['lacquer'], subCategory: 'Лак для паркета', name: 'TRICOL TOP PU',
+    consumption: 0.1, unit: 'кг', isLacquer: true,
+    containers: [{ size: 1, price: 3700 }, { size: 5, price: 16300 }]
+  },
+  {
+    id: 'primer_universal', topCategory: ['lacquer'], subCategory: 'Грунтовка', name: 'TRICOL PRIMER UNIVERSAL',
+    consumption: 0.1, unit: 'кг',
+    containers: [{ size: 1, price: 2300 }, { size: 5, price: 9500 }]
+  },
+  {
+    id: 'hard_only', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 1K PT‑MS HARD',
+    consumption: 1.3, unit: 'кг', isSilaneLayer: true,
+    containers: [{ size: 14, price: 21200, label: '2 пакета сашe по 7 кг' }]
+  },
+  {
+    id: 'primer_lv', topCategory: ['parquet', 'laminate', 'sps'], subCategory: 'Грунтовка', name: 'TRICOL PRO PRIMER LV',
+    consumption: 0.17, unit: 'л',
+    containers: [{ size: 5, price: 9950 }, { size: 1, price: 2400 }]
+  },
+  {
+    id: 'primer_epoxy', topCategory: ['parquet', 'laminate'], subCategory: 'Грунтовка', name: 'TRICOL PRO PRIMER 2K EPOXY',
+    consumption: 0.3, unit: 'кг',
+    containers: [{ size: 4.8, price: 12760 }]
+  },
+  {
+    id: 'primer_easy', topCategory: ['laminate', 'sps'], subCategory: 'Грунтовка', name: 'TRICOL PRIMER EASYFLOW',
+    consumption: 0.1, unit: 'л',
+    containers: [{ size: 5, price: 8430 }]
+  }
+];
+
+/* ==================== СОСТОЯНИЕ ==================== */
+const state = {
+  topCategory: null,
+  checked: {},
+  sashePref: false,
+  spcSpatula: 'lvt',
+  lacquerLayers: 3,
+  discountMode: 'none',
+  totalDiscount: 0,
+  perItemDiscount: {}
+};
+
+const LAYER_OPTIONS = [
+  { value: 2, label: '2 слоя' },
+  { value: 3, label: '3 слоя' }
+];
+
+function renderLacquerLayerOptions() {
+  const box = document.getElementById('lacquerLayerOptions');
+  box.innerHTML = '';
+  LAYER_OPTIONS.forEach(o => {
+    const pill = document.createElement('div');
+    pill.className = 'radio-pill' + (state.lacquerLayers === o.value ? ' active' : '');
+    pill.textContent = o.label;
+    pill.addEventListener('click', () => {
+      state.lacquerLayers = o.value;
+      renderLacquerLayerOptions();
+      renderProducts();
+    });
+    box.appendChild(pill);
+  });
+}
+
+const SPATULA_OPTIONS = [
+  { id: 'lvt', label: 'ЛВТ', sub: 'шпатель А2', value: 0.5 },
+  { id: 'lvt_lock', label: 'ЛВТ замковый', sub: 'шпатель B1', value: 0.7 },
+  { id: 'spc4', label: 'СПС 4 мм', sub: 'шпатель B1', value: 0.7 },
+  { id: 'spc4plus', label: 'СПС >4мм и ламинат', sub: 'шпатель B3', value: 0.9 }
+];
+
+function currentSpcConsumption() {
+  return SPATULA_OPTIONS.find(o => o.id === state.spcSpatula).value;
+}
+
+function renderSpatulaOptions() {
+  const box = document.getElementById('spatulaOptions');
+  box.innerHTML = '';
+  SPATULA_OPTIONS.forEach(o => {
+    const pill = document.createElement('div');
+    pill.className = 'radio-pill' + (state.spcSpatula === o.id ? ' active' : '');
+    pill.innerHTML = `${o.label}<small>${o.sub} · ${o.value} кг/м²</small>`;
+    pill.addEventListener('click', () => {
+      state.spcSpatula = o.id;
+      renderSpatulaOptions();
+      renderProducts();
+    });
+    box.appendChild(pill);
+  });
+}
+
+const productList = document.getElementById('productList');
+
+/* ==================== ПЕРЕКЛЮЧЕНИЕ ТИПА ПОКРЫТИЯ ==================== */
+document.querySelectorAll('#categorySelector .seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#categorySelector .seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.topCategory = btn.dataset.cat;
+
+    // при смене типа покрытия сбрасываем выбор товаров и скидок по товарам —
+    // они относились к предыдущему набору химии
+    state.checked = {};
+    state.perItemDiscount = {};
+    state.sashePref = false;
+
+    const faneraRow = document.getElementById('faneraRow');
+    const faneraToggle = document.getElementById('faneraToggle');
+    if (state.topCategory === 'parquet') {
+      faneraRow.style.display = 'flex';
+    } else {
+      faneraRow.style.display = 'none';
+      faneraToggle.checked = false;
+    }
+
+    const spatulaBlock = document.getElementById('spcSpatulaBlock');
+    if (state.topCategory === 'sps') {
+      spatulaBlock.style.display = 'block';
+      renderSpatulaOptions();
+    } else {
+      spatulaBlock.style.display = 'none';
+    }
+
+    const layersBlock = document.getElementById('lacquerLayersBlock');
+    if (state.topCategory === 'lacquer') {
+      layersBlock.style.display = 'block';
+      renderLacquerLayerOptions();
+    } else {
+      layersBlock.style.display = 'none';
+    }
+
+    renderProducts();
+    if (state.discountMode === 'perItem') renderPerItemDiscount();
+  });
+});
+
+/* ==================== РЕНДЕР СПИСКА ТОВАРОВ ==================== */
+function renderProducts() {
+  productList.innerHTML = '';
+
+  if (!state.topCategory) {
+    productList.innerHTML = '<div class="empty-note">Сначала выбери тип покрытия выше</div>';
+    return;
+  }
+
+  const items = PRODUCTS.filter(p => p.topCategory.includes(state.topCategory));
+  let lastSub = null;
+
+  items.forEach(p => {
+    if (p.subCategory !== lastSub) {
+      const catLbl = document.createElement('div');
+      catLbl.className = 'category-label';
+      catLbl.textContent = p.subCategory;
+      productList.appendChild(catLbl);
+      lastSub = p.subCategory;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'product';
+    row.id = 'product-' + p.id;
+    if (state.checked[p.id]) row.classList.add('checked');
+
+    const displayConsumption = p.isSpcGlue ? currentSpcConsumption() : p.consumption;
+    const consumptionLabel = p.isLacquer
+      ? `${p.consumption} ${p.unit}/м² · ${state.lacquerLayers} слоя`
+      : `${displayConsumption} ${p.unit}/м²`;
+
+    row.innerHTML = `
+      <div class="product-main">
+        <div class="checkbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1c1b19" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="name">${p.name}</div>
+          <div class="meta">Расход ${consumptionLabel}</div>
+        </div>
+      </div>
+      ${p.isSilane ? `
+      <div class="product-extra has-extra">
+        <div class="radio-group">
+          <div class="radio-pill ${state.sashePref ? '' : 'active'}" data-pref="cheap">Дешевле<small>подбор из всей тары</small></div>
+          <div class="radio-pill ${state.sashePref ? 'active' : ''}" data-pref="sashe">Предпочитаю сашe<small>меньше потерь клея</small></div>
+        </div>
+      </div>` : `<div class="product-extra"></div>`}
+    `;
+
+    row.querySelector('.product-main').addEventListener('click', () => {
+      state.checked[p.id] = !state.checked[p.id];
+      row.classList.toggle('checked', state.checked[p.id]);
+      if (state.discountMode === 'perItem') renderPerItemDiscount();
+    });
+
+    if (p.isSilane) {
+      row.querySelectorAll('.radio-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          row.querySelectorAll('.radio-pill').forEach(x => x.classList.remove('active'));
+          pill.classList.add('active');
+          state.sashePref = pill.dataset.pref === 'sashe';
+        });
+      });
+    }
+
+    productList.appendChild(row);
+  });
+}
+renderProducts();
+
+/* ==================== ФАНЕРА → АВТО-ГАЛОЧКА 2К ==================== */
+document.getElementById('faneraToggle').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    state.checked['2k'] = true;
+    const row = document.getElementById('product-2k');
+    if (row) row.classList.add('checked');
+    if (state.discountMode === 'perItem') renderPerItemDiscount();
+  }
+});
+
+/* ==================== СКИДКА: ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ ==================== */
+const discountModeButtons = document.querySelectorAll('#totalDiscountBlock, #perItemDiscountBlock');
+const modeButtons = document.querySelectorAll('.card .seg-row [data-mode]');
+const totalBlock = document.getElementById('totalDiscountBlock');
+const perItemBlock = document.getElementById('perItemDiscountBlock');
+
+modeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    modeButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.discountMode = btn.dataset.mode;
+    totalBlock.style.display = state.discountMode === 'total' ? 'block' : 'none';
+    perItemBlock.style.display = state.discountMode === 'perItem' ? 'block' : 'none';
+    if (state.discountMode === 'perItem') renderPerItemDiscount();
+  });
+});
+
+const totalDiscountInput = document.getElementById('totalDiscountInput');
+const discountWarn = document.getElementById('discountWarn');
+
+function clampDiscount(val) {
+  let v = parseFloat(val);
+  if (isNaN(v) || v < 0) v = 0;
+  if (v > 40) {
+    v = 40;
+    discountWarn.classList.add('show');
+    setTimeout(() => discountWarn.classList.remove('show'), 2500);
+  }
+  return v;
+}
+
+totalDiscountInput.addEventListener('focus', () => totalDiscountInput.select());
+
+totalDiscountInput.addEventListener('input', () => {
+  const clamped = clampDiscount(totalDiscountInput.value);
+  totalDiscountInput.value = clamped;
+  state.totalDiscount = clamped;
+});
+
+function renderPerItemDiscount() {
+  const selected = PRODUCTS.filter(p => state.checked[p.id]);
+  const list = document.createElement('div');
+  list.id = 'perItemList';
+
+  if (selected.length === 0) {
+    list.innerHTML = `<div class="empty-note">Сначала отметь продукты в списке выше</div>`;
+  } else {
+    selected.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'item-discount-row';
+      row.innerHTML = `
+        <div class="iname">${p.name}</div>
+        <div class="pct-input">
+          <input type="number" min="0" max="40" value="${state.perItemDiscount[p.id] || ''}" placeholder="0" data-id="${p.id}">
+          <span>%</span>
+        </div>
+      `;
+      row.querySelector('input').addEventListener('focus', (e) => e.target.select());
+      row.querySelector('input').addEventListener('input', (e) => {
+        const clamped = clampDiscount(e.target.value);
+        e.target.value = clamped;
+        state.perItemDiscount[p.id] = clamped;
+      });
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('perItemList')?.remove();
+  perItemBlock.appendChild(list);
+}
+
+/* ==================== ПОДБОР ТАРЫ ==================== */
+function bestCombo(volume, containers) {
+  if (volume <= 0) return { combo: [], total: 0, cost: 0 };
+  const sorted = [...containers].sort((a, b) => b.size - a.size);
+  let best = null;
+
+  function consider(counts) {
+    let total = 0, cost = 0;
+    counts.forEach((n, i) => { total += n * sorted[i].size; cost += n * sorted[i].price; });
+    if (total >= volume - 1e-9) {
+      if (!best || cost < best.cost || (cost === best.cost && total < best.total)) {
+        best = {
+          combo: sorted.map((c, i) => ({ ...c, count: counts[i] })).filter(c => c.count > 0),
+          total, cost
+        };
+      }
+    }
+  }
+
+  const maxN = (size) => Math.ceil(volume / size) + 1;
+
+  if (sorted.length === 1) {
+    consider([Math.ceil(volume / sorted[0].size)]);
+  } else if (sorted.length === 2) {
+    for (let n0 = 0; n0 <= maxN(sorted[0].size); n0++) {
+      const rem = volume - n0 * sorted[0].size;
+      const n1 = rem > 0 ? Math.ceil(rem / sorted[1].size) : 0;
+      consider([n0, n1]);
+    }
+  } else if (sorted.length === 3) {
+    for (let n0 = 0; n0 <= maxN(sorted[0].size); n0++) {
+      for (let n1 = 0; n1 <= maxN(sorted[1].size); n1++) {
+        const rem = volume - n0 * sorted[0].size - n1 * sorted[1].size;
+        const n2 = rem > 0 ? Math.ceil(rem / sorted[2].size) : 0;
+        consider([n0, n1, n2]);
+      }
+    }
+  }
+  return best;
+}
+
+/* ==================== РАСЧЁТ ОБЪЁМА ДЛЯ ТОВАРА ==================== */
+function getVolume(p, area, fanera, silaneSelected) {
+  if (p.isTwoK) {
+    const doubled = fanera && !silaneSelected;
+    return area * p.consumption * (doubled ? 2 : 1);
+  }
+  const consumption = p.isSpcGlue ? currentSpcConsumption() : p.consumption;
+  const layers = p.isLacquer ? state.lacquerLayers : (p.layers || 1);
+  return area * consumption * layers;
+}
+
+/* ==================== ФОРМАТИРОВАНИЕ ==================== */
+const fmt = (n) => Math.round(n).toLocaleString('ru-RU');
+function comboLabel(combo, unit) {
+  return combo.map(c => `${c.size} ${unit} × ${c.count}`).join(' + ');
+}
+
+/* ==================== РАСЧЁТ СМЕТЫ ==================== */
+document.getElementById('calcBtn').addEventListener('click', () => {
+  const area = parseFloat(document.getElementById('areaInput').value);
+  const receiptWrap = document.getElementById('receiptWrap');
+  const modal = document.getElementById('receiptModal');
+
+  if (!state.topCategory) {
+    receiptWrap.innerHTML = `<div class="empty-note">Сначала выбери тип покрытия</div>`;
+    modal.classList.add('open');
+    return;
+  }
+
+  if (!area || area <= 0) {
+    receiptWrap.innerHTML = `<div class="empty-note">Укажи площадь объекта, чтобы рассчитать смету</div>`;
+    modal.classList.add('open');
+    return;
+  }
+
+  const selected = PRODUCTS.filter(p => state.checked[p.id] && p.topCategory.includes(state.topCategory));
+  if (selected.length === 0) {
+    receiptWrap.innerHTML = `<div class="empty-note">Отметь хотя бы один продукт</div>`;
+    modal.classList.add('open');
+    return;
+  }
+
+  const fanera = document.getElementById('faneraToggle').checked;
+  const silaneSelected = PRODUCTS.some(p => p.isSilaneLayer && state.checked[p.id]);
+
+  let items = [];
+  let subtotal = 0;
+  let discountTotal = 0;
+
+  selected.forEach(p => {
+    const volume = getVolume(p, area, fanera, silaneSelected);
+    let containers = p.containers;
+    if (p.isSilane) {
+      containers = state.sashePref ? p.containersSashe : p.containersStandard;
+    }
+    const result = bestCombo(volume, containers);
+    if (!result) return;
+
+    let itemDiscountPct = 0;
+    if (state.discountMode === 'total') itemDiscountPct = state.totalDiscount;
+    if (state.discountMode === 'perItem') itemDiscountPct = state.perItemDiscount[p.id] || 0;
+
+    const priceBefore = result.cost;
+    const priceAfter = priceBefore * (1 - itemDiscountPct / 100);
+
+    subtotal += priceBefore;
+    discountTotal += (priceBefore - priceAfter);
+
+    items.push({
+      name: p.name,
+      volumeLabel: `нужно ${volume % 1 === 0 ? volume : volume.toFixed(2)} ${p.unit}${p.isLacquer ? ` (${state.lacquerLayers} слоя)` : ''}`,
+      comboLabel: comboLabel(result.combo, p.unit),
+      priceBefore,
+      priceAfter,
+      discountPct: itemDiscountPct
+    });
+  });
+
+  const grandTotal = subtotal - discountTotal;
+
+  let html = `<div class="receipt">
+    <div class="r-head">
+      <div class="biz">СМЕТА НА МАТЕРИАЛЫ</div>
+      <div class="sub">Площадь объекта: ${area} м² ${fanera ? '· с фанерой' : ''}</div>
+    </div>
+    <div class="r-line"></div>`;
+
+  items.forEach(it => {
+    html += `
+      <div class="r-item">
+        <div class="rn">${it.name}</div>
+        <div class="rd">${it.volumeLabel} · тара: ${it.comboLabel}</div>
+        <div class="rp">
+          <span>${it.discountPct > 0 ? `<span class="strike">${fmt(it.priceBefore)} ₽</span>` : ''}</span>
+          <span>${fmt(it.priceAfter)} ₽ ${it.discountPct > 0 ? `(-${it.discountPct}%)` : ''}</span>
+        </div>
+      </div>`;
+  });
+
+  html += `<div class="r-line"></div>
+    <div class="r-total"><span>ИТОГО</span><span>${fmt(grandTotal)} ₽</span></div>`;
+
+  if (discountTotal > 0) {
+    html += `<div class="r-savings"><span>Экономия по скидке</span><span>−${fmt(discountTotal)} ₽</span></div>`;
+  }
+
+  html += `<div class="r-foot">TRICOL PRO · расчёт носит справочный характер</div>
+  </div>`;
+
+  receiptWrap.innerHTML = html;
+  modal.classList.add('open');
+  modal.scrollTop = 0;
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('receiptModal').classList.remove('open');
+});
+</script>
+
+</body>
+</html>

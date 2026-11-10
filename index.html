@@ -345,6 +345,7 @@
     text-align:center; color:#8a8069; font-size:10.5px; margin-top:16px;
   }
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -457,35 +458,35 @@ const PRODUCTS = [
   {
     id: '2k', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 2K PU PT',
     consumption: 1.3, unit: 'кг', isTwoK: true,
-    containers: [{ size: 9, price: 7200 }]
+    containers: [{ size: 9, price: 7500 }]
   },
   {
     id: 'silane', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 1K PT‑MS HARD‑ELASTIC',
     consumption: 1.3, unit: 'кг', isSilane: true, isSilaneLayer: true,
     containersStandard: [
-      { size: 14, price: 14550, label: 'Ведро 14 кг' },
-      { size: 7, price: 8225, label: 'Пакет сашe 7 кг' },
-      { size: 1, price: 1450, label: 'Туба 1 кг' }
+      { size: 14, price: 15700, label: 'Ведро 14 кг' },
+      { size: 7, price: 8775, label: 'Сашe 7 кг' },
+      { size: 1, price: 1550, label: 'Туба 600 мл (1 кг)' }
     ],
     containersSashe: [
-      { size: 7, price: 8225, label: 'Пакет сашe 7 кг' },
-      { size: 1, price: 1450, label: 'Туба 1 кг' }
+      { size: 7, price: 8775, label: 'Сашe 7 кг' },
+      { size: 1, price: 1550, label: 'Туба 600 мл (1 кг)' }
     ]
   },
   {
     id: 'laminate', topCategory: ['laminate'], subCategory: 'Клей для ламината', name: 'TRICOL PRO LAMINATE MS PLUS',
     consumption: 0.9, unit: 'кг',
-    containers: [{ size: 15, price: 13950 }]
+    containers: [{ size: 15, price: 15000 }]
   },
   {
     id: 'ms_lvt', topCategory: ['sps'], subCategory: 'Клей для SPC / LVT / WPC', name: 'TRICOL 1K MS LVT PLUS',
     consumption: 0.5, unit: 'кг', isSpcGlue: true,
-    containers: [{ size: 5, price: 4600 }]
+    containers: [{ size: 5, price: 4950 }]
   },
   {
     id: 'pu_pvc', topCategory: ['sps'], subCategory: 'Клей для SPC / LVT / WPC', name: 'TRICOL 2K PU PVC',
     consumption: 0.5, unit: 'кг', isSpcGlue: true,
-    containers: [{ size: 5, price: 3800 }]
+    containers: [{ size: 5, price: 4050 }]
   },
   {
     id: 'lacquer_basic', topCategory: ['lacquer'], subCategory: 'Лак для паркета', name: 'TRICOL BASIC',
@@ -505,22 +506,22 @@ const PRODUCTS = [
   {
     id: 'hard_only', topCategory: ['parquet'], subCategory: 'Клей для паркета', name: 'TRICOL PRO 1K PT‑MS HARD',
     consumption: 1.3, unit: 'кг', isSilaneLayer: true,
-    containers: [{ size: 14, price: 21200, label: '2 пакета сашe по 7 кг' }]
+    containers: [{ size: 14, price: 22100, label: '2 сашe по 7 кг' }]
   },
   {
     id: 'primer_lv', topCategory: ['parquet', 'laminate', 'sps'], subCategory: 'Грунтовка', name: 'TRICOL PRO PRIMER LV',
     consumption: 0.17, unit: 'л',
-    containers: [{ size: 5, price: 9950 }, { size: 1, price: 2400 }]
+    containers: [{ size: 5, price: 10150 }, { size: 1, price: 2450 }]
   },
   {
     id: 'primer_epoxy', topCategory: ['parquet', 'laminate'], subCategory: 'Грунтовка', name: 'TRICOL PRO PRIMER 2K EPOXY',
     consumption: 0.3, unit: 'кг',
-    containers: [{ size: 4.8, price: 12760 }]
+    containers: [{ size: 4.8, price: 12950 }]
   },
   {
     id: 'primer_easy', topCategory: ['laminate', 'sps'], subCategory: 'Грунтовка', name: 'TRICOL PRIMER EASYFLOW',
     consumption: 0.1, unit: 'л',
-    containers: [{ size: 5, price: 8430 }]
+    containers: [{ size: 5, price: 8600 }]
   }
 ];
 
@@ -657,8 +658,8 @@ function renderProducts() {
 
     const displayConsumption = p.isSpcGlue ? currentSpcConsumption() : p.consumption;
     const consumptionLabel = p.isLacquer
-      ? `${p.consumption} ${p.unit}/м² · ${state.lacquerLayers} слоя`
-      : `${displayConsumption} ${p.unit}/м²`;
+      ? `${p.consumption} ${p.unit}/м² · ${state.lacquerLayers} слоя · +10% запас`
+      : `${displayConsumption} ${p.unit}/м² · +10% запас`;
 
     row.innerHTML = `
       <div class="product-main">
@@ -826,13 +827,14 @@ function bestCombo(volume, containers) {
 
 /* ==================== РАСЧЁТ ОБЪЁМА ДЛЯ ТОВАРА ==================== */
 function getVolume(p, area, fanera, silaneSelected) {
+  const RESERVE = 1.1; // запас 10%
   if (p.isTwoK) {
     const doubled = fanera && !silaneSelected;
-    return area * p.consumption * (doubled ? 2 : 1);
+    return area * p.consumption * (doubled ? 2 : 1) * RESERVE;
   }
   const consumption = p.isSpcGlue ? currentSpcConsumption() : p.consumption;
   const layers = p.isLacquer ? state.lacquerLayers : (p.layers || 1);
-  return area * consumption * layers;
+  return area * consumption * layers * RESERVE;
 }
 
 /* ==================== ФОРМАТИРОВАНИЕ ==================== */
